@@ -8,7 +8,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AuthController
 {
-    // Login
+
     public function login(Request $request, Response $response)
     {
         $data = $request->getParsedBody();
@@ -27,7 +27,7 @@ class AuthController
             return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
 
-        // Generar token simple
+        
         $token = bin2hex(random_bytes(32));
         $user->token = $token;
         $user->sesion_activa = 1;  // ← Usamos 1 en vez de true
@@ -47,7 +47,7 @@ class AuthController
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    // Logout
+   
     public function logout(Request $request, Response $response)
     {
         $headers = $request->getHeaders();

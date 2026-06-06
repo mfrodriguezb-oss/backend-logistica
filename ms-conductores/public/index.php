@@ -1,17 +1,15 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';require __DIR__ . '/../app/Config/database.php';
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../app/Config/database.php';
+
 use Slim\Factory\AppFactory;
 
 $app = AppFactory::create();
+$app->addBodyParsingMiddleware();
 
-$app->get('/', function ($request, $response) {
-    $data = [
-        'message' => 'Microservicio ms-conductores funcionando correctamente'
-    ];
+$app->setBasePath('/backend-logistica/ms-conductores/public');
 
-    $response->getBody()->write(json_encode($data));
-    return $response->withHeader('Content-Type', 'application/json');
-});
+(require __DIR__ . '/../app/Routes/routes.php')($app);
 
 $app->run();

@@ -8,13 +8,10 @@ use Slim\Factory\AppFactory;
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 
-$app->get('/', function ($request, $response) {
-    $data = [
-        'message' => 'Microservicio ms-auth funcionando correctamente'
-    ];
+// ESTO VA ANTES de las rutas
+$app->setBasePath('/backend-logistica/ms-auth/public');
 
-    $response->getBody()->write(json_encode($data));
-    return $response->withHeader('Content-Type', 'application/json');
-});
+// Cargar rutas desde archivo
+(require __DIR__ . '/../app/Routes/routes.php')($app);
 
 $app->run();
