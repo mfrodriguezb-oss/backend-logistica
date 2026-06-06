@@ -6,6 +6,7 @@ require __DIR__ . '/../app/Config/database.php';
 use Slim\Factory\AppFactory;
 
 $app = AppFactory::create();
+$app->addBodyParsingMiddleware();
 
 $app->get('/', function ($request, $response) {
     $data = [
