@@ -78,13 +78,28 @@ class RutaController
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
-
     public function programarViaje(Request $request, Response $response)
     {
         $data = $request->getParsedBody();
 
+    
         if (empty($data['conductor_id']) || empty($data['vehiculo_id']) || empty($data['ruta_id']) || empty($data['fecha_salida']) || empty($data['hora_salida']) || empty($data['fecha_estimada_llegada'])) {
             return $this->error($response, 'Faltan campos obligatorios', 400);
+        }
+
+    
+        if (!is_numeric($data['conductor_id']) || $data['conductor_id'] <= 0) {
+            return $this->error($response, 'El conductor_id debe ser un numero mayor a 0', 400);
+        }
+
+        if (!is_numeric($data['vehiculo_id']) || $data['vehiculo_id'] <= 0) {
+            return $this->error($response, 'El vehiculo_id debe ser un numero mayor a 0', 400);
+        }
+
+     
+        $ruta = Ruta::find($data['ruta_id']);
+        if (!$ruta) {
+            return $this->error($response, 'La ruta no existe', 400);
         }
 
         $programacion = ProgramacionViaje::create($data);
