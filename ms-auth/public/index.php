@@ -9,7 +9,7 @@ $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
 
 // ESTO VA ANTES de las rutas
-$app->setBasePath('/backend-logistica/ms-auth/public');
+$app->setBasePath('/backend-logistica/ms-auth/public/index.php');
 
 // Cargar rutas desde archivo
 (require __DIR__ . '/../app/Routes/routes.php')($app);
