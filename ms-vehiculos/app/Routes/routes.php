@@ -1,21 +1,23 @@
-<?php
+    <?php
 
-use Slim\App;
-use App\Controllers\VehiculoController;
+    use Slim\App;
+    use App\Controllers\VehiculoController;
 
-return function (App $app) {
- 
-    $app->get('/', function ($request, $response) {
-        $data = ['message' => 'Microservicio ms-vehiculos funcionando correctamente'];
-        $response->getBody()->write(json_encode($data));
-        return $response->withHeader('Content-Type', 'application/json');
-    });
+    return function (App $app) {
+        
+        $app->get('/', function ($request, $response) {
+            $response->getBody()->write(json_encode([
+                'estado' => 'ok',
+                'servicio' => 'vehiculos'
+            ]));
+            return $response->withHeader('Content-Type', 'application/json');
+        });
 
-    $vehiculoController = new VehiculoController();
-    
-    $app->get('/vehiculos', [$vehiculoController, 'index']);
-    $app->post('/vehiculos', [$vehiculoController, 'store']);
-    $app->put('/vehiculos/{id}', [$vehiculoController, 'update']);
-    $app->patch('/vehiculos/{id}/estado', [$vehiculoController, 'cambiarEstado']);
-    
-};
+        $controlador = new VehiculoController();
+        
+        $app->get('/vehiculos', [$controlador, 'listar']);
+        $app->post('/vehiculos', [$controlador, 'crear']);
+        $app->put('/vehiculos/{id}', [$controlador, 'actualizar']);
+        $app->patch('/vehiculos/{id}/estado', [$controlador, 'estado']);
+        
+    };

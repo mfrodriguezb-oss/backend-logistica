@@ -9,154 +9,134 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 class VehiculoController
 {
    
-    public function index(Request $request, Response $response)
+    public function listar(Request $request, Response $response)
     {
-        $params = $request->getQueryParams();
-        $query = Vehiculo::query();
+        $parametros = $request->getQueryParams();
+        $consulta = Vehiculo::query();
 
-        if (!empty($params['placa'])) {
-            $query->where('placa', 'like', '%' . $params['placa'] . '%');
+        if (!empty($parametros['placa'])) {
+            $consulta->where('placa', 'like', '%' . $parametros['placa'] . '%');
         }
 
-        if (!empty($params['estado'])) {
-            $query->where('estado', $params['estado']);
+        if (!empty($parametros['estado'])) {
+            $consulta->where('estado', $parametros['estado']);
         }
 
-        if (!empty($params['tipo'])) {
-            $query->where('tipo_vehiculo', 'like', '%' . $params['tipo'] . '%');
+        if (!empty($parametros['tipo'])) {
+            $consulta->where('tipo_vehiculo', 'like', '%' . $parametros['tipo'] . '%');
         }
 
-        $vehiculos = $query->get();
+        $resultados = $consulta->get();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $vehiculos
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-  
-    public function store(Request $request, Response $response)
+   
+    public function crear(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
-        if (empty($data['placa']) || empty($data['tipo_vehiculo']) || empty($data['capacidad_carga']) || empty($data['modelo']) || empty($data['marca'])) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Faltan campos obligatorios'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        if (empty($entrada['placa']) || empty($entrada['tipo_vehiculo']) || empty($entrada['capacidad_carga']) || 
+            empty($entrada['modelo']) || empty($entrada['marca'])) {
+            return $this->respuestaError($response, 'Todos los campos obligatorios deben completarse', 400);
         }
 
-        
-        if ($data['capacidad_carga'] <= 0) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'La capacidad de carga debe ser mayor a 0'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        if ($entrada['capacidad_carga'] <= 0) {
+            return $this->respuestaError($response, 'La capacidad debe ser mayor a cero', 400);
         }
 
-      
-        $existePlaca = Vehiculo::where('placa', $data['placa'])->first();
+        $existePlaca = Vehiculo::where('placa', $entrada['placa'])->first();
         if ($existePlaca) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'La placa ya esta registrada'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+            return $this->respuestaError($response, 'Esta placa ya esta registrada', 400);
         }
 
-        $vehiculo = Vehiculo::create($data);
+        $nuevo = Vehiculo::create($entrada);
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Vehiculo creado exitosamente',
-            'data' => $vehiculo
+            'exito' => true,
+            'mensaje' => 'Vehiculo registrado correctamente',
+            'codigo' => 201,
+            'registro' => $nuevo
         ]));
         return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
     }
 
  
-    public function update(Request $request, Response $response, $args)
+    public function actualizar(Request $request, Response $response, $args)
     {
         $id = $args['id'];
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
         $vehiculo = Vehiculo::find($id);
 
         if (!$vehiculo) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Vehiculo no encontrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            return $this->respuestaError($response, 'Vehiculo no encontrado en el sistema', 404);
         }
 
-   
-        if (!empty($data['capacidad_carga']) && $data['capacidad_carga'] <= 0) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'La capacidad de carga debe ser mayor a 0'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        if (!empty($entrada['capacidad_carga']) && $entrada['capacidad_carga'] <= 0) {
+            return $this->respuestaError($response, 'La capacidad debe ser mayor a cero', 400);
         }
 
-        if (!empty($data['placa']) && $data['placa'] !== $vehiculo->placa) {
-            $existe = Vehiculo::where('placa', $data['placa'])->first();
+        if (!empty($entrada['placa']) && $entrada['placa'] !== $vehiculo->placa) {
+            $existe = Vehiculo::where('placa', $entrada['placa'])->first();
             if ($existe) {
-                $response->getBody()->write(json_encode([
-                    'success' => false,
-                    'message' => 'La placa ya esta registrada en otro vehiculo'
-                ]));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->respuestaError($response, 'Esta placa pertenece a otro vehiculo', 400);
             }
         }
 
-        $vehiculo->update($data);
+        $vehiculo->update($entrada);
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Vehiculo actualizado exitosamente',
-            'data' => $vehiculo
+            'exito' => true,
+            'mensaje' => 'Informacion actualizada',
+            'codigo' => 200,
+            'registro' => $vehiculo
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-
-    public function cambiarEstado(Request $request, Response $response, $args)
+  
+    public function estado(Request $request, Response $response, $args)
     {
         $id = $args['id'];
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
         $vehiculo = Vehiculo::find($id);
 
         if (!$vehiculo) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Vehiculo no encontrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            return $this->respuestaError($response, 'Vehiculo no encontrado en el sistema', 404);
         }
 
-        $estadosPermitidos = ['disponible', 'en_ruta', 'mantenimiento', 'inactivo'];
+        $estadosValidos = ['disponible', 'en_ruta', 'mantenimiento', 'inactivo'];
 
-        if (empty($data['estado']) || !in_array($data['estado'], $estadosPermitidos)) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Estado no valido. Use: disponible, en_ruta, mantenimiento, inactivo'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        if (empty($entrada['estado']) || !in_array($entrada['estado'], $estadosValidos)) {
+            return $this->respuestaError($response, 'Estado no reconocido. Valores: disponible, en_ruta, mantenimiento, inactivo', 400);
         }
 
-        $vehiculo->estado = $data['estado'];
+        $vehiculo->estado = $entrada['estado'];
         $vehiculo->save();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Estado actualizado',
-            'data' => $vehiculo
+            'exito' => true,
+            'mensaje' => 'Estado modificado',
+            'codigo' => 200,
+            'registro' => $vehiculo
         ]));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    private function respuestaError(Response $response, $texto, $codigo)
+    {
+        $response->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => $texto,
+            'codigo' => $codigo
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
     }
 }
