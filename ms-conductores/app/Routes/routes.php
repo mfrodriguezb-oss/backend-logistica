@@ -5,19 +5,19 @@ use App\Controllers\ConductorController;
 
 return function (App $app) {
     
-    
     $app->get('/', function ($request, $response) {
-        $data = ['message' => 'Microservicio ms-conductores funcionando correctamente'];
-        $response->getBody()->write(json_encode($data));
+        $response->getBody()->write(json_encode([
+            'estado' => 'ok',
+            'servicio' => 'conductores'
+        ]));
         return $response->withHeader('Content-Type', 'application/json');
     });
 
+    $controlador = new ConductorController();
     
-    $conductorController = new ConductorController();
-    
-    $app->get('/conductores', [$conductorController, 'index']);
-    $app->post('/conductores', [$conductorController, 'store']);
-    $app->put('/conductores/{id}', [$conductorController, 'update']);
-    $app->patch('/conductores/{id}/estado', [$conductorController, 'cambiarEstado']);
+    $app->get('/conductores', [$controlador, 'listar']);
+    $app->post('/conductores', [$controlador, 'crear']);
+    $app->put('/conductores/{id}', [$controlador, 'actualizar']);
+    $app->patch('/conductores/{id}/estado', [$controlador, 'estado']);
     
 };

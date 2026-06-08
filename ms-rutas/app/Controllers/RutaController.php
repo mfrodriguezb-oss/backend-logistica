@@ -9,174 +9,247 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class RutaController
 {
-    
+
     
     public function listarRutas(Request $request, Response $response)
     {
-        $params = $request->getQueryParams();
-        $query = Ruta::query();
+        $parametros = $request->getQueryParams();
+        $consulta = Ruta::query();
 
-        if (!empty($params['ciudad'])) {
-            $query->where('ciudad_origen', 'like', '%' . $params['ciudad'] . '%')
-                  ->orWhere('ciudad_destino', 'like', '%' . $params['ciudad'] . '%');
+        if (!empty($parametros['ciudad'])) {
+            $consulta->where('ciudad_origen', 'like', '%' . $parametros['ciudad'] . '%')
+                  ->orWhere('ciudad_destino', 'like', '%' . $parametros['ciudad'] . '%');
         }
 
+        $resultados = $consulta->get();
+
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $query->get()
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
     public function crearRuta(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
-        if (empty($data['ciudad_origen']) || empty($data['ciudad_destino']) || empty($data['distancia']) || empty($data['tiempo_estimado'])) {
-            return $this->error($response, 'Faltan campos obligatorios', 400);
+        if (empty($entrada['ciudad_origen']) || empty($entrada['ciudad_destino']) || empty($entrada['distancia']) || empty($entrada['tiempo_estimado'])) {
+            return $this->respuestaError($response, 'Todos los campos obligatorios deben completarse', 400);
         }
 
-        if ($data['distancia'] <= 0) {
-            return $this->error($response, 'La distancia debe ser mayor a 0', 400);
+        if ($entrada['distancia'] <= 0) {
+            return $this->respuestaError($response, 'La distancia debe ser mayor a cero', 400);
         }
 
-        if (Ruta::where('ciudad_origen', $data['ciudad_origen'])->where('ciudad_destino', $data['ciudad_destino'])->first()) {
-            return $this->error($response, 'Ya existe una ruta con ese origen y destino', 400);
+        $existe = Ruta::where('ciudad_origen', $entrada['ciudad_origen'])
+            ->where('ciudad_destino', $entrada['ciudad_destino'])
+            ->first();
+
+        if ($existe) {
+            return $this->respuestaError($response, 'Ya existe una ruta entre estas ciudades', 400);
         }
 
-        $ruta = Ruta::create($data);
-        return $this->exito($response, 'Ruta creada exitosamente', $ruta, 201);
+        $nuevo = Ruta::create($entrada);
+
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Ruta registrada correctamente',
+            'codigo' => 201,
+            'registro' => $nuevo
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
     }
 
     public function actualizarRuta(Request $request, Response $response, $args)
     {
-        $ruta = Ruta::find($args['id']);
-        if (!$ruta) return $this->error($response, 'Ruta no encontrada', 404);
+        $id = $args['id'];
+        $entrada = $request->getParsedBody();
 
-        $data = $request->getParsedBody();
-        if (!empty($data['distancia']) && $data['distancia'] <= 0) {
-            return $this->error($response, 'La distancia debe ser mayor a 0', 400);
+        $ruta = Ruta::find($id);
+
+        if (!$ruta) {
+            return $this->respuestaError($response, 'Ruta no encontrada en el sistema', 404);
         }
 
-        $ruta->update($data);
-        return $this->exito($response, 'Ruta actualizada exitosamente', $ruta);
-    }
+        if (!empty($entrada['distancia']) && $entrada['distancia'] <= 0) {
+            return $this->respuestaError($response, 'La distancia debe ser mayor a cero', 400);
+        }
 
-    public function listarProgramaciones(Request $request, Response $response)
-    {
-        $params = $request->getQueryParams();
-        $query = ProgramacionViaje::query();
-
-        if (!empty($params['conductor_id'])) $query->where('conductor_id', $params['conductor_id']);
-        if (!empty($params['vehiculo_id'])) $query->where('vehiculo_id', $params['vehiculo_id']);
-        if (!empty($params['estado'])) $query->where('estado', $params['estado']);
-        if (!empty($params['fecha'])) $query->where('fecha_salida', $params['fecha']);
+        $ruta->update($entrada);
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $query->get()
+            'exito' => true,
+            'mensaje' => 'Informacion de ruta actualizada',
+            'codigo' => 200,
+            'registro' => $ruta
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
+
+    
+    public function listarProgramaciones(Request $request, Response $response)
+    {
+        $parametros = $request->getQueryParams();
+        $consulta = ProgramacionViaje::query();
+
+        if (!empty($parametros['conductor_id'])) {
+            $consulta->where('conductor_id', $parametros['conductor_id']);
+        }
+        if (!empty($parametros['vehiculo_id'])) {
+            $consulta->where('vehiculo_id', $parametros['vehiculo_id']);
+        }
+        if (!empty($parametros['estado'])) {
+            $consulta->where('estado', $parametros['estado']);
+        }
+        if (!empty($parametros['fecha'])) {
+            $consulta->where('fecha_salida', $parametros['fecha']);
+        }
+
+        $resultados = $consulta->get();
+
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
     public function programarViaje(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
-    
-        if (empty($data['conductor_id']) || empty($data['vehiculo_id']) || empty($data['ruta_id']) || empty($data['fecha_salida']) || empty($data['hora_salida']) || empty($data['fecha_estimada_llegada'])) {
-            return $this->error($response, 'Faltan campos obligatorios', 400);
+      
+        if (empty($entrada['conductor_id']) || empty($entrada['vehiculo_id']) || empty($entrada['ruta_id']) || 
+            empty($entrada['fecha_salida']) || empty($entrada['hora_salida']) || empty($entrada['fecha_estimada_llegada'])) {
+            return $this->respuestaError($response, 'Todos los campos obligatorios deben completarse', 400);
         }
 
-    
-        if (!is_numeric($data['conductor_id']) || $data['conductor_id'] <= 0) {
-            return $this->error($response, 'El conductor_id debe ser un numero mayor a 0', 400);
+      
+        if (!is_numeric($entrada['conductor_id']) || $entrada['conductor_id'] <= 0) {
+            return $this->respuestaError($response, 'El conductor no es valido', 400);
         }
 
-        if (!is_numeric($data['vehiculo_id']) || $data['vehiculo_id'] <= 0) {
-            return $this->error($response, 'El vehiculo_id debe ser un numero mayor a 0', 400);
+
+        if (!is_numeric($entrada['vehiculo_id']) || $entrada['vehiculo_id'] <= 0) {
+            return $this->respuestaError($response, 'El vehiculo no es valido', 400);
         }
 
-     
-        $ruta = Ruta::find($data['ruta_id']);
+        $ruta = Ruta::find($entrada['ruta_id']);
         if (!$ruta) {
-            return $this->error($response, 'La ruta no existe', 400);
+            return $this->respuestaError($response, 'La ruta seleccionada no existe', 400);
         }
 
-        $programacion = ProgramacionViaje::create($data);
-        return $this->exito($response, 'Viaje programado exitosamente', $programacion, 201);
+        $nuevo = ProgramacionViaje::create($entrada);
+
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Viaje programado correctamente',
+            'codigo' => 201,
+            'registro' => $nuevo
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
     }
 
     public function reprogramarViaje(Request $request, Response $response, $args)
     {
-        $programacion = ProgramacionViaje::find($args['id']);
-        if (!$programacion) return $this->error($response, 'Programacion no encontrada', 404);
-        if ($programacion->estado === 'cancelado') {
-            return $this->error($response, 'No se puede modificar un viaje cancelado', 400);
+        $id = $args['id'];
+        $entrada = $request->getParsedBody();
+
+        $programacion = ProgramacionViaje::find($id);
+
+        if (!$programacion) {
+            return $this->respuestaError($response, 'Programacion no encontrada en el sistema', 404);
         }
 
-        $programacion->update($request->getParsedBody());
-        return $this->exito($response, 'Viaje reprogramado exitosamente', $programacion);
+        if ($programacion->estado === 'cancelado') {
+            return $this->respuestaError($response, 'No se puede modificar un viaje que ha sido cancelado', 400);
+        }
+
+        $programacion->update($entrada);
+
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Viaje reprogramado correctamente',
+            'codigo' => 200,
+            'registro' => $programacion
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
     public function cambiarEstadoProgramacion(Request $request, Response $response, $args)
     {
-        $programacion = ProgramacionViaje::find($args['id']);
-        if (!$programacion) return $this->error($response, 'Programacion no encontrada', 404);
+        $id = $args['id'];
+        $entrada = $request->getParsedBody();
 
-        $estado = $request->getParsedBody()['estado'] ?? '';
-        $estadosPermitidos = ['programado', 'en_transito', 'retrasado', 'finalizado', 'cancelado'];
+        $programacion = ProgramacionViaje::find($id);
 
-        if (!in_array($estado, $estadosPermitidos)) {
-            return $this->error($response, 'Estado no valido', 400);
+        if (!$programacion) {
+            return $this->respuestaError($response, 'Programacion no encontrada en el sistema', 404);
         }
+
+        $estado = $entrada['estado'] ?? '';
+        $estadosValidos = ['programado', 'en_transito', 'retrasado', 'finalizado', 'cancelado'];
+
+        if (!in_array($estado, $estadosValidos)) {
+            return $this->respuestaError($response, 'Estado no reconocido. Valores permitidos: programado, en_transito, retrasado, finalizado, cancelado', 400);
+        }
+
         if ($programacion->estado === 'cancelado' && $estado === 'en_transito') {
-            return $this->error($response, 'No se puede iniciar un viaje cancelado', 400);
+            return $this->respuestaError($response, 'No se puede iniciar un viaje que ha sido cancelado', 400);
         }
 
         if ($estado === 'finalizado' && !in_array($programacion->estado, ['en_transito', 'retrasado'])) {
-            return $this->error($response, 'No se puede finalizar un viaje no iniciado', 400);
+            return $this->respuestaError($response, 'No se puede finalizar un viaje que no ha sido iniciado', 400);
         }
 
         $programacion->estado = $estado;
         $programacion->save();
 
-        return $this->exito($response, 'Estado actualizado', $programacion);
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Estado del viaje modificado',
+            'codigo' => 200,
+            'registro' => $programacion
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
     public function finalizarViaje(Request $request, Response $response, $args)
     {
-        $programacion = ProgramacionViaje::find($args['id']);
-        if (!$programacion) return $this->error($response, 'Programacion no encontrada', 404);
+        $id = $args['id'];
+
+        $programacion = ProgramacionViaje::find($id);
+
+        if (!$programacion) {
+            return $this->respuestaError($response, 'Programacion no encontrada en el sistema', 404);
+        }
 
         if (!in_array($programacion->estado, ['en_transito', 'retrasado'])) {
-            return $this->error($response, 'No se puede finalizar un viaje no iniciado', 400);
+            return $this->respuestaError($response, 'No se puede finalizar un viaje que no ha sido iniciado', 400);
         }
 
         $programacion->estado = 'finalizado';
         $programacion->save();
 
-        return $this->exito($response, 'Viaje finalizado exitosamente', $programacion);
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Viaje finalizado correctamente',
+            'codigo' => 200,
+            'registro' => $programacion
+        ]));
+        return $response->withHeader('Content-Type', 'application/json');
     }
 
-
-    private function error(Response $response, $mensaje, $codigo)
+    private function respuestaError(Response $response, $texto, $codigo)
     {
         $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => $mensaje
+            'exito' => false,
+            'mensaje' => $texto,
+            'codigo' => $codigo
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
-    }
-
-    private function exito(Response $response, $mensaje, $data = null, $codigo = 200)
-    {
-        $respuesta = [
-            'success' => true,
-            'message' => $mensaje
-        ];
-        if ($data) $respuesta['data'] = $data;
-
-        $response->getBody()->write(json_encode($respuesta));
         return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
     }
 }

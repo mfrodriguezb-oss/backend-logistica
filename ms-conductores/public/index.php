@@ -5,7 +5,6 @@ require __DIR__ . '/../app/Config/database.php';
 
 use Slim\Factory\AppFactory;
 use Psr\Http\Message\ServerRequestInterface as Request;
-use Psr\Http\Message\ResponseInterface as Response;
 use Slim\Psr7\Response as SlimResponse;
 
 $app = AppFactory::create();
@@ -14,22 +13,20 @@ $app->addBodyParsingMiddleware();
 $app->setBasePath('/backend-logistica/ms-conductores/public/index.php');
 
 
-
 $app->add(function (Request $request, $handler) {
-    $headers = $request->getHeaders();
-    $token = $headers['HTTP_TOKEN'][0] ?? '';
-
+    $cabeceras = $request->getHeaders();
+    $token = $cabeceras['HTTP_TOKEN'][0] ?? '';
 
     if (empty($token)) {
-        $response = new SlimResponse();
-        $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => 'Token no proporcionado. Acceso denegado.'
+        $respuesta = new SlimResponse();
+        $respuesta->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => 'Token no proporcionado. Acceso denegado.',
+            'codigo' => 401
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+        return $respuesta->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
 
- 
     $usuario = \Illuminate\Database\Capsule\Manager::table('usuarios')
         ->where('token', $token)
         ->where('sesion_activa', 1)
@@ -37,18 +34,17 @@ $app->add(function (Request $request, $handler) {
         ->first();
 
     if (!$usuario) {
-        $response = new SlimResponse();
-        $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => 'Token invalido o sesion inactiva. Acceso denegado.'
+        $respuesta = new SlimResponse();
+        $respuesta->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => 'Token invalido o sesion inactiva. Acceso denegado.',
+            'codigo' => 401
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+        return $respuesta->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
 
-    // Token valido, continuar
     return $handler->handle($request);
 });
-
 
 (require __DIR__ . '/../app/Routes/routes.php')($app);
 

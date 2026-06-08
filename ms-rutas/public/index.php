@@ -12,17 +12,19 @@ $app->addBodyParsingMiddleware();
 
 $app->setBasePath('/backend-logistica/ms-rutas/public/index.php');
 
+
 $app->add(function (Request $request, $handler) {
-    $headers = $request->getHeaders();
-    $token = $headers['HTTP_TOKEN'][0] ?? '';
+    $cabeceras = $request->getHeaders();
+    $token = $cabeceras['HTTP_TOKEN'][0] ?? '';
 
     if (empty($token)) {
-        $response = new SlimResponse();
-        $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => 'Token no proporcionado. Acceso denegado.'
+        $respuesta = new SlimResponse();
+        $respuesta->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => 'Token no proporcionado. Acceso denegado.',
+            'codigo' => 401
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+        return $respuesta->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
 
     $usuario = \Illuminate\Database\Capsule\Manager::table('usuarios')
@@ -32,12 +34,13 @@ $app->add(function (Request $request, $handler) {
         ->first();
 
     if (!$usuario) {
-        $response = new SlimResponse();
-        $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => 'Token invalido o sesion inactiva. Acceso denegado.'
+        $respuesta = new SlimResponse();
+        $respuesta->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => 'Token invalido o sesion inactiva. Acceso denegado.',
+            'codigo' => 401
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
+        return $respuesta->withHeader('Content-Type', 'application/json')->withStatus(401);
     }
 
     return $handler->handle($request);

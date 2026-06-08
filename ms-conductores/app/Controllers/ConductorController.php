@@ -8,170 +8,141 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class ConductorController
 {
-    // Listar todos (con filtros opcionales)
-    public function index(Request $request, Response $response)
+
+    public function listar(Request $request, Response $response)
     {
-        $params = $request->getQueryParams();
-        $query = Conductor::query();
+        $parametros = $request->getQueryParams();
+        $consulta = Conductor::query();
 
-        if (!empty($params['documento'])) {
-            $query->where('documento', 'like', '%' . $params['documento'] . '%');
+        if (!empty($parametros['documento'])) {
+            $consulta->where('documento', 'like', '%' . $parametros['documento'] . '%');
         }
 
-        if (!empty($params['licencia'])) {
-            $query->where('numero_licencia', 'like', '%' . $params['licencia'] . '%');
+        if (!empty($parametros['licencia'])) {
+            $consulta->where('numero_licencia', 'like', '%' . $parametros['licencia'] . '%');
         }
 
-        if (!empty($params['estado'])) {
-            $query->where('estado', $params['estado']);
+        if (!empty($parametros['estado'])) {
+            $consulta->where('estado', $parametros['estado']);
         }
 
-        $conductores = $query->get();
+        $resultados = $consulta->get();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $conductores
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    // Crear conductor
-    public function store(Request $request, Response $response)
+    public function crear(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
-        // Validaciones
-        if (empty($data['nombres']) || empty($data['apellidos']) || empty($data['documento']) || empty($data['numero_licencia'])) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Faltan campos obligatorios'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+
+        if (empty($entrada['nombres']) || empty($entrada['apellidos']) || empty($entrada['documento']) || empty($entrada['numero_licencia'])) {
+            return $this->respuestaError($response, 'Todos los campos obligatorios deben completarse', 400);
         }
 
-        // Validar documento duplicado
-        $existeDocumento = Conductor::where('documento', $data['documento'])->first();
-        if ($existeDocumento) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'El documento ya esta registrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+
+        $existeDoc = Conductor::where('documento', $entrada['documento'])->first();
+        if ($existeDoc) {
+            return $this->respuestaError($response, 'Ya existe un conductor con este documento', 400);
+        }
+        $existeLic = Conductor::where('numero_licencia', $entrada['numero_licencia'])->first();
+        if ($existeLic) {
+            return $this->respuestaError($response, 'Ya existe un conductor con esta licencia', 400);
         }
 
-        // Validar licencia duplicada
-        $existeLicencia = Conductor::where('numero_licencia', $data['numero_licencia'])->first();
-        if ($existeLicencia) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'El numero de licencia ya esta registrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+
+        if (empty($entrada['fecha_vencimiento_licencia']) || $entrada['fecha_vencimiento_licencia'] < date('Y-m-d')) {
+            return $this->respuestaError($response, 'La fecha de vencimiento no es valida', 400);
         }
 
-        // Validar fecha de vencimiento
-        if (empty($data['fecha_vencimiento_licencia']) || $data['fecha_vencimiento_licencia'] < date('Y-m-d')) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'La fecha de vencimiento de licencia no es valida'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
-        }
-
-        $conductor = Conductor::create($data);
+        $nuevo = Conductor::create($entrada);
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Conductor creado exitosamente',
-            'data' => $conductor
+            'exito' => true,
+            'mensaje' => 'Conductor registrado correctamente',
+            'codigo' => 201,
+            'registro' => $nuevo
         ]));
         return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
     }
 
-    // Actualizar conductor
-    public function update(Request $request, Response $response, $args)
+    public function actualizar(Request $request, Response $response, $args)
     {
         $id = $args['id'];
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
         $conductor = Conductor::find($id);
 
         if (!$conductor) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Conductor no encontrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            return $this->respuestaError($response, 'Conductor no encontrado en el sistema', 404);
         }
 
-        // Validar documento duplicado (si cambia)
-        if (!empty($data['documento']) && $data['documento'] !== $conductor->documento) {
-            $existe = Conductor::where('documento', $data['documento'])->first();
+        if (!empty($entrada['documento']) && $entrada['documento'] !== $conductor->documento) {
+            $existe = Conductor::where('documento', $entrada['documento'])->first();
             if ($existe) {
-                $response->getBody()->write(json_encode([
-                    'success' => false,
-                    'message' => 'El documento ya esta registrado en otro conductor'
-                ]));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->respuestaError($response, 'Este documento ya pertenece a otro conductor', 400);
             }
         }
 
-        // Validar licencia duplicada (si cambia)
-        if (!empty($data['numero_licencia']) && $data['numero_licencia'] !== $conductor->numero_licencia) {
-            $existe = Conductor::where('numero_licencia', $data['numero_licencia'])->first();
+        if (!empty($entrada['numero_licencia']) && $entrada['numero_licencia'] !== $conductor->numero_licencia) {
+            $existe = Conductor::where('numero_licencia', $entrada['numero_licencia'])->first();
             if ($existe) {
-                $response->getBody()->write(json_encode([
-                    'success' => false,
-                    'message' => 'El numero de licencia ya esta registrado en otro conductor'
-                ]));
-                return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+                return $this->respuestaError($response, 'Esta licencia ya pertenece a otro conductor', 400);
             }
         }
 
-        $conductor->update($data);
+        $conductor->update($entrada);
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Conductor actualizado exitosamente',
-            'data' => $conductor
+            'exito' => true,
+            'mensaje' => 'Informacion actualizada',
+            'codigo' => 200,
+            'registro' => $conductor
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-    // Cambiar estado
-    public function cambiarEstado(Request $request, Response $response, $args)
+    public function estado(Request $request, Response $response, $args)
     {
         $id = $args['id'];
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
         $conductor = Conductor::find($id);
 
         if (!$conductor) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Conductor no encontrado'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(404);
+            return $this->respuestaError($response, 'Conductor no encontrado en el sistema', 404);
         }
 
-        $estadosPermitidos = ['disponible', 'en_ruta', 'inactivo'];
+        $estadosValidos = ['disponible', 'en_ruta', 'inactivo'];
 
-        if (empty($data['estado']) || !in_array($data['estado'], $estadosPermitidos)) {
-            $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Estado no valido. Use: disponible, en_ruta, inactivo'
-            ]));
-            return $response->withHeader('Content-Type', 'application/json')->withStatus(400);
+        if (empty($entrada['estado']) || !in_array($entrada['estado'], $estadosValidos)) {
+            return $this->respuestaError($response, 'Estado no reconocido. Valores: disponible, en_ruta, inactivo', 400);
         }
 
-        $conductor->estado = $data['estado'];
+        $conductor->estado = $entrada['estado'];
         $conductor->save();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Estado actualizado',
-            'data' => $conductor
+            'exito' => true,
+            'mensaje' => 'Estado modificado',
+            'codigo' => 200,
+            'registro' => $conductor
         ]));
         return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    private function respuestaError(Response $response, $texto, $codigo)
+    {
+        $response->getBody()->write(json_encode([
+            'exito' => false,
+            'mensaje' => $texto,
+            'codigo' => $codigo
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
     }
 }
