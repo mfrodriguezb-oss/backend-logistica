@@ -4,18 +4,19 @@ use Slim\App;
 use App\Controllers\AuthController;
 
 return function (App $app) {
-
+    
     $app->get('/', function ($request, $response) {
-        $data = ['message' => 'Microservicio ms-auth funcionando correctamente'];
-        $response->getBody()->write(json_encode($data));
+        $response->getBody()->write(json_encode([
+            'estado' => 'ok',
+            'servicio' => 'autenticacion'
+        ]));
         return $response->withHeader('Content-Type', 'application/json');
     });
 
+    $controlador = new AuthController();
     
-    $authController = new AuthController();
-    
-    $app->post('/login', [$authController, 'login']);
-    $app->post('/logout', [$authController, 'logout']);
-    $app->get('/validar', [$authController, 'validar']);
+    $app->post('/login', [$controlador, 'login']);
+    $app->post('/logout', [$controlador, 'logout']);
+    $app->get('/validar', [$controlador, 'validar']);
     
 };

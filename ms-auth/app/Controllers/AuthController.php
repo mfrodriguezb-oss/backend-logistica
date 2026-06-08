@@ -8,92 +8,93 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class AuthController
 {
-
     public function login(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
-        $usuario = $data['usuario'] ?? '';
-        $contrasena = $data['contrasena'] ?? '';
+        $datos = $request->getParsedBody();
+        $identificador = $datos['usuario'] ?? '';
+        $clave = $datos['contrasena'] ?? '';
 
-        $user = Usuario::where('usuario', $usuario)
-            ->orWhere('correo', $usuario)
-            ->first();
+        $usuario = Usuario::where('usuario', $identificador)->first();
 
-        if (!$user || $user->contrasena !== $contrasena) {
+        if (!$usuario) {
+            $usuario = Usuario::where('correo', $identificador)->first();
+        }
+
+        if (!$usuario || $usuario->contrasena !== $clave) {
             $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Credenciales incorrectas'
+                'exito' => false,
+                'mensaje' => 'Credenciales invalidas',
+                'codigo' => 401
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
 
-        
-        $token = bin2hex(random_bytes(32));
-        $user->token = $token;
-        $user->sesion_activa = 1;  // ← Usamos 1 en vez de true
-        $user->save();
+        $token = md5(uniqid() . time());
+
+        $usuario->token = $token;
+        $usuario->sesion_activa = 1;
+        $usuario->save();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Login exitoso',
-            'token' => $token,
-            'usuario' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'usuario' => $user->usuario,
-                'rol' => $user->rol
+            'exito' => true,
+            'mensaje' => 'Autenticacion exitosa',
+            'codigo' => 200,
+            'datos' => [
+                'token' => $token,
+                'nombre' => $usuario->nombre,
+                'rol' => $usuario->rol
             ]
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-   
     public function logout(Request $request, Response $response)
     {
-        $headers = $request->getHeaders();
-        $token = $headers['HTTP_TOKEN'][0] ?? '';
+        $cabeceras = $request->getHeaders();
+        $token = $cabeceras['HTTP_TOKEN'][0] ?? '';
 
-        $user = Usuario::where('token', $token)->first();
+        $usuario = Usuario::where('token', $token)->first();
 
-        if ($user) {
-            $user->token = null;
-            $user->sesion_activa = 0;  // ← Usamos 0 en vez de false
-            $user->save();
+        if ($usuario) {
+            $usuario->token = null;
+            $usuario->sesion_activa = 0;
+            $usuario->save();
         }
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Sesion cerrada correctamente'
+            'exito' => true,
+            'mensaje' => 'Sesion finalizada',
+            'codigo' => 200
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-
     public function validar(Request $request, Response $response)
     {
-        $headers = $request->getHeaders();
-        $token = $headers['HTTP_TOKEN'][0] ?? '';
+        $cabeceras = $request->getHeaders();
+        $token = $cabeceras['HTTP_TOKEN'][0] ?? '';
 
-        $user = Usuario::where('token', $token)
-            ->where('sesion_activa', 1)  // ← Comparamos con 1
+        $usuario = Usuario::where('token', $token)
+            ->where('sesion_activa', 1)
             ->where('estado', 'activo')
             ->first();
 
-        if (!$user) {
+        if (!$usuario) {
             $response->getBody()->write(json_encode([
-                'success' => false,
-                'message' => 'Token invalido o sesion inactiva'
+                'exito' => false,
+                'mensaje' => 'Token no valido',
+                'codigo' => 401
             ]));
             return $response->withHeader('Content-Type', 'application/json')->withStatus(401);
         }
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'message' => 'Sesion valida',
-            'usuario' => [
-                'id' => $user->id,
-                'nombre' => $user->nombre,
-                'rol' => $user->rol
+            'exito' => true,
+            'mensaje' => 'Token activo',
+            'codigo' => 200,
+            'datos' => [
+                'nombre' => $usuario->nombre,
+                'rol' => $usuario->rol
             ]
         ]));
         return $response->withHeader('Content-Type', 'application/json');
