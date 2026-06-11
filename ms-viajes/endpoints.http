@@ -1,0 +1,28 @@
+GET http://localhost/backend-logistica/ms-viajes/public/index.php/
+Content-Type: application/json
+
+###
+
+GET http://localhost/backend-logistica/ms-viajes/public/index.php/seguimientos?programacion_id=1&estado=en_transito&fecha=2025-06-15
+TOKEN: <token>
+Content-Type: application/json
+
+###
+
+POST http://localhost/backend-logistica/ms-viajes/public/index.php/seguimientos
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "programacion_viaje_id": 1,
+  "fecha": "2025-06-15",
+  "hora": "14:30:00",
+  "estado": "en_transito",
+  "novedad": "Viaje iniciado a tiempo"
+}
+
+###
+
+GET http://localhost/backend-logistica/ms-viajes/public/index.php/seguimientos/historial/1
+TOKEN: <token>
+Content-Type: application/json

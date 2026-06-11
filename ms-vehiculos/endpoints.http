@@ -1,0 +1,44 @@
+GET http://localhost/backend-logistica/ms-vehiculos/public/index.php/
+Content-Type: application/json
+
+###
+
+GET http://localhost/backend-logistica/ms-vehiculos/public/index.php/vehiculos?estado=disponible&placa=ABC123&tipo=camion
+TOKEN: <token>
+Content-Type: application/json
+
+###
+
+POST http://localhost/backend-logistica/ms-vehiculos/public/index.php/vehiculos
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "placa": "ABC123",
+  "tipo_vehiculo": "camion",
+  "capacidad_carga": 5000,
+  "modelo": "2023",
+  "marca": "Volvo",
+  "estado": "disponible"
+}
+
+###
+
+PUT http://localhost/backend-logistica/ms-vehiculos/public/index.php/vehiculos/1
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "capacidad_carga": 6000,
+  "modelo": "2024"
+}
+
+###
+
+PATCH http://localhost/backend-logistica/ms-vehiculos/public/index.php/vehiculos/1/estado
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "estado": "en_ruta"
+}

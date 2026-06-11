@@ -1,0 +1,88 @@
+GET http://localhost/backend-logistica/ms-rutas/public/index.php/
+Content-Type: application/json
+
+###
+
+GET http://localhost/backend-logistica/ms-rutas/public/index.php/rutas?ciudad=Bogota
+TOKEN: <token>
+Content-Type: application/json
+
+###
+
+POST http://localhost/backend-logistica/ms-rutas/public/index.php/rutas
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "ciudad_origen": "Bogota",
+  "ciudad_destino": "Medellin",
+  "distancia": 420,
+  "tiempo_estimado": "8 horas",
+  "observaciones": "Ruta principal"
+}
+
+###
+
+PUT http://localhost/backend-logistica/ms-rutas/public/index.php/rutas/1
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "distancia": 450,
+  "tiempo_estimado": "9 horas",
+  "observaciones": "Ruta con desvios por mantenimiento"
+}
+
+###
+
+GET http://localhost/backend-logistica/ms-rutas/public/index.php/programaciones?conductor_id=1&vehiculo_id=2&estado=programado&fecha=2025-06-15
+TOKEN: <token>
+Content-Type: application/json
+
+###
+
+POST http://localhost/backend-logistica/ms-rutas/public/index.php/programaciones
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "conductor_id": 1,
+  "vehiculo_id": 2,
+  "ruta_id": 1,
+  "fecha_salida": "2025-06-15",
+  "hora_salida": "08:00:00",
+  "fecha_estimada_llegada": "2025-06-15",
+  "observaciones": "Carga de mercancia general",
+  "estado": "programado"
+}
+
+###
+
+PUT http://localhost/backend-logistica/ms-rutas/public/index.php/programaciones/1
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "conductor_id": 3,
+  "vehiculo_id": 4,
+  "fecha_salida": "2025-06-16",
+  "hora_salida": "10:00:00",
+  "fecha_estimada_llegada": "2025-06-16",
+  "observaciones": "Reprogramado por mantenimiento del vehiculo"
+}
+
+###
+
+PATCH http://localhost/backend-logistica/ms-rutas/public/index.php/programaciones/1/estado
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "estado": "en_transito"
+}
+
+###
+
+PATCH http://localhost/backend-logistica/ms-rutas/public/index.php/programaciones/1/finalizar
+TOKEN: <token>
+Content-Type: application/json

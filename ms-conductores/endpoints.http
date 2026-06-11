@@ -1,0 +1,48 @@
+GET http://localhost/backend-logistica/ms-conductores/public/index.php/
+Content-Type: application/json
+
+###
+
+GET http://localhost/backend-logistica/ms-conductores/public/index.php/conductores?estado=disponible&documento=12345678&licencia=B12345
+TOKEN: <token>
+Content-Type: application/json
+
+###
+
+POST http://localhost/backend-logistica/ms-conductores/public/index.php/conductores
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "nombres": "Juan Carlos",
+  "apellidos": "Perez Gomez",
+  "documento": "12345678",
+  "telefono": "3001234567",
+  "correo": "juan.perez@email.com",
+  "numero_licencia": "B12345",
+  "categoria_licencia": "C1",
+  "fecha_vencimiento_licencia": "2026-12-31",
+  "estado": "disponible"
+}
+
+###
+
+PUT http://localhost/backend-logistica/ms-conductores/public/index.php/conductores/1
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "telefono": "3009876543",
+  "correo": "nuevo.correo@email.com",
+  "categoria_licencia": "C2"
+}
+
+###
+
+PATCH http://localhost/backend-logistica/ms-conductores/public/index.php/conductores/1/estado
+TOKEN: <token>
+Content-Type: application/json
+
+{
+  "estado": "en_ruta"
+}

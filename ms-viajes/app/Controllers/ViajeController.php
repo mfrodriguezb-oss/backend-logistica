@@ -8,85 +8,85 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 class ViajeController
 {
-   
-    public function index(Request $request, Response $response)
+ 
+    public function listar(Request $request, Response $response)
     {
-        $params = $request->getQueryParams();
-        $query = SeguimientoViaje::query();
+        $parametros = $request->getQueryParams();
+        $consulta = SeguimientoViaje::query();
 
-        if (!empty($params['programacion_id'])) {
-            $query->where('programacion_viaje_id', $params['programacion_id']);
+        if (!empty($parametros['programacion_id'])) {
+            $consulta->where('programacion_viaje_id', $parametros['programacion_id']);
         }
 
-        if (!empty($params['estado'])) {
-            $query->where('estado', $params['estado']);
+        if (!empty($parametros['estado'])) {
+            $consulta->where('estado', $parametros['estado']);
         }
 
-        if (!empty($params['fecha'])) {
-            $query->where('fecha', $params['fecha']);
+        if (!empty($parametros['fecha'])) {
+            $consulta->where('fecha', $parametros['fecha']);
         }
+
+        $resultados = $consulta->get();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $query->get()
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-   
-    public function store(Request $request, Response $response)
+
+    public function crear(Request $request, Response $response)
     {
-        $data = $request->getParsedBody();
+        $entrada = $request->getParsedBody();
 
-        if (empty($data['programacion_viaje_id']) || empty($data['fecha']) || empty($data['hora']) || empty($data['estado'])) {
-            return $this->error($response, 'Faltan campos obligatorios', 400);
+        if (empty($entrada['programacion_viaje_id']) || empty($entrada['fecha']) || 
+            empty($entrada['hora']) || empty($entrada['estado'])) {
+            return $this->respuestaError($response, 'Todos los campos obligatorios deben completarse', 400);
         }
 
-        $estadosPermitidos = ['programado', 'en_transito', 'retrasado', 'finalizado', 'cancelado'];
-        if (!in_array($data['estado'], $estadosPermitidos)) {
-            return $this->error($response, 'Estado no valido', 400);
+        $estadosValidos = ['programado', 'en_transito', 'retrasado', 'finalizado', 'cancelado'];
+        if (!in_array($entrada['estado'], $estadosValidos)) {
+            return $this->respuestaError($response, 'Estado no reconocido. Valores: programado, en_transito, retrasado, finalizado, cancelado', 400);
         }
 
-        $seguimiento = SeguimientoViaje::create($data);
-        return $this->exito($response, 'Seguimiento registrado exitosamente', $seguimiento, 201);
+        $nuevo = SeguimientoViaje::create($entrada);
+
+        $response->getBody()->write(json_encode([
+            'exito' => true,
+            'mensaje' => 'Seguimiento registrado correctamente',
+            'codigo' => 201,
+            'registro' => $nuevo
+        ]));
+        return $response->withHeader('Content-Type', 'application/json')->withStatus(201);
     }
 
-   
     public function historial(Request $request, Response $response, $args)
     {
         $programacionId = $args['programacion_id'];
 
-        $seguimientos = SeguimientoViaje::where('programacion_viaje_id', $programacionId)
+        $resultados = SeguimientoViaje::where('programacion_viaje_id', $programacionId)
             ->orderBy('fecha', 'asc')
             ->orderBy('hora', 'asc')
             ->get();
 
         $response->getBody()->write(json_encode([
-            'success' => true,
-            'data' => $seguimientos
+            'exito' => true,
+            'total' => count($resultados),
+            'lista' => $resultados
         ]));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
-   
-    private function error(Response $response, $mensaje, $codigo)
+  
+    private function respuestaError(Response $response, $texto, $codigo)
     {
         $response->getBody()->write(json_encode([
-            'success' => false,
-            'message' => $mensaje
+            'exito' => false,
+            'mensaje' => $texto,
+            'codigo' => $codigo
         ]));
-        return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
-    }
-
-    private function exito(Response $response, $mensaje, $data = null, $codigo = 200)
-    {
-        $respuesta = [
-            'success' => true,
-            'message' => $mensaje
-        ];
-        if ($data) $respuesta['data'] = $data;
-
-        $response->getBody()->write(json_encode($respuesta));
         return $response->withHeader('Content-Type', 'application/json')->withStatus($codigo);
     }
 }
